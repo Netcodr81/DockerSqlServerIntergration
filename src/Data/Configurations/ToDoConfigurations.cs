@@ -8,7 +8,7 @@ public class ToDoConfigurations : IEntityTypeConfiguration<ToDo>
 {
     public void Configure(EntityTypeBuilder<ToDo> builder)
     {
-        builder.ToTable("ToDo", "Docker");
+        builder.ToTable("ToDo", "demo");
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Title).IsRequired().HasMaxLength(100);
