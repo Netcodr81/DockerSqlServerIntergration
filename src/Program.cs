@@ -1,9 +1,18 @@
+using DockerSqlServerIntegration.Api.Data;
+using DockerSqlServerIntegration.Api.Data.Models;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 var app = builder.Build();
 
@@ -16,29 +25,69 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapGet("/todos", async (IDbContextFactory<AppDbContext> context) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    using var dbContext = context.CreateDbContext();
+    return await dbContext.ToDos.ToListAsync();
 })
-.WithName("GetWeatherForecast")
+.WithName("GetAllToDos")
 .WithOpenApi();
 
-app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+app.MapPost("/todos/add-todo", async (IDbContextFactory<AppDbContext> context, ToDo toDo) =>
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+    try
+    {
+        using var dbContext = context.CreateDbContext();
+        dbContext.ToDos.Add(toDo);
+        await dbContext.SaveChangesAsync();
+        return Results.Created($"/todos/{toDo.Id}", toDo);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
+app.MapPut("/todos/update-todo/{id}", async (IDbContextFactory<AppDbContext> context, int id, ToDo toDo) =>
+{
+    try
+    {
+        using var dbContext = context.CreateDbContext();
+        var existingToDo = await dbContext.ToDos.FindAsync(id);
+        if (existingToDo == null)
+        {
+            return Results.NotFound();
+        }
+        existingToDo.Title = toDo.Title;
+        existingToDo.Description = toDo.Description;
+        existingToDo.IsCompleted = toDo.IsCompleted;
+        await dbContext.SaveChangesAsync();
+        return Results.NoContent();
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
+app.MapDelete("/todos/delete-todo/{id}", async (IDbContextFactory<AppDbContext> context, int id) =>
+{
+    try
+    {
+        using var dbContext = context.CreateDbContext();
+        var existingToDo = await dbContext.ToDos.FindAsync(id);
+        if (existingToDo == null)
+        {
+            return Results.NotFound();
+        }
+        dbContext.ToDos.Remove(existingToDo);
+        await dbContext.SaveChangesAsync();
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
+app.Run();

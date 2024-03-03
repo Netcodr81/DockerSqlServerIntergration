@@ -361,5 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# This excludes all migration folders and Docker volume files
 /src/Migrations
-/Docker/data
+/Docker/data/**/*

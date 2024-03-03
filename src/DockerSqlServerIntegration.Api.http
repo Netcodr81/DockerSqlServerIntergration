@@ -1,6 +1,30 @@
-@DockerSqlServerIntegration.Api_HostAddress = http://localhost:5296
+@baseUrl = https://localhost:7028
 
-GET {{DockerSqlServerIntegration.Api_HostAddress}}/weatherforecast/
+GET {{baseUrl}}/todos/
 Accept: application/json
 
 ###
+
+POST {{baseUrl}}/todos/add-todo
+Content-Type: application/json
+
+{   
+    "title": "Learn Postman",
+    "description": "Learn Postman for API testing",
+    "isCompleted": false
+}
+
+###
+
+PUT {{baseUrl}}/todos/update-todo/1
+Content-Type: application/json
+
+{       
+    "title": "Clean Room",
+    "description": "Pick up room for the week",
+    "isCompleted": false
+}
+
+###
+
+DELETE {{baseUrl}}/todos/delete-todo/4
